@@ -1,5 +1,3 @@
-// ----- SHORTEN FORM -----
-
 const shortenForm = document.getElementById("shorten-form");
 const urlInput = document.getElementById("url");
 const shortenResult = document.getElementById("shorten-result");
@@ -34,7 +32,7 @@ shortenForm.addEventListener("submit", async function (event) {
         shortenResult.classList.remove("hidden");
 
         urlInput.value = "";
-        loadAllLinks(); // refresh the list below
+        loadAllLinks();
 
     } catch (error) {
         shortenError.textContent = error.message;
@@ -54,8 +52,6 @@ copyBtn.addEventListener("click", async function () {
     }
 });
 
-
-// ----- LOOKUP FORM -----
 
 const lookupForm = document.getElementById("lookup-form");
 const lookupCodeInput = document.getElementById("lookup-code");
@@ -86,8 +82,6 @@ lookupForm.addEventListener("submit", async function (event) {
 });
 
 
-// ----- YOUR LINKS LIST -----
-
 const linksList = document.getElementById("links-list");
 const linkCount = document.getElementById("link-count");
 
@@ -114,7 +108,6 @@ async function loadAllLinks() {
         linksList.appendChild(row);
     });
 
-    // wire up copy buttons for each row
     document.querySelectorAll(".copy-row-btn").forEach(function (btn) {
         btn.addEventListener("click", async function () {
             const code = btn.getAttribute("data-code");
@@ -125,14 +118,13 @@ async function loadAllLinks() {
         });
     });
 
-    // wire up delete buttons for each row
     document.querySelectorAll(".delete-row-btn").forEach(function (btn) {
         btn.addEventListener("click", async function () {
             const code = btn.getAttribute("data-code");
             await fetch("/api/urls/" + code, { method: "DELETE" });
-            loadAllLinks(); // refresh after deleting
+            loadAllLinks();
         });
     });
 }
 
-loadAllLinks(); // run once when the page first loads
+loadAllLinks();
