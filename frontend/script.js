@@ -1,130 +1,148 @@
-const shortenForm = document.getElementById("shorten-form");
-const urlInput = document.getElementById("url");
-const shortenResult = document.getElementById("shorten-result");
-const shortLinkText = document.getElementById("short-link-text");
-const shortenError = document.getElementById("shorten-error");
-const copyBtn = document.getElementById("copy-btn");
+const urlInput = document.getElementById("long-url-input");
+const longurlbtn = document.getElementById("long-url-btn");
+const urlList = document.getElementById("url-list");
+const codeInput = document.getElementById("short-url-input");
+const Findbtn = document.getElementById("short-url-btn");
+const result = document.getElementById("result");
+const CopyBtn = document.querySelector(".copy");
+const shortCodeOutput = document.getElementById("short-code");
+const urlcount = document.getElementById("url-count");
+const qrinput = document.getElementById("qr_input");
+const qrcodebtn = document.getElementById("qr_code_btn");
+const qrdisplay = document.getElementById("qr_display");
 
-let currentShortUrl = "";
+const API = "http://127.0.0.1:8000";
 
-shortenForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    shortenResult.classList.add("hidden");
-    shortenError.classList.add("hidden");
+longurlbtn.addEventListener("click", async () => {
+    const longUrl = urlInput.value.trim();
+    if (!longUrl) {
+        alert("Enter URL");
+        return;
+    }
 
-    const longUrl = urlInput.value;
-
-    try {
-        const response = await fetch("/api/shorten", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ long_url: longUrl })
-        });
-
-        if (!response.ok) {
-            throw new Error("Something went wrong. Try again.");
+    const response = await fetch(
+        `${API}/shortner?longUrl=${encodeURIComponent(longUrl)}`,
+        {
+            method: "POST"
         }
+    );
 
-        const data = await response.json();
-        currentShortUrl = window.location.origin + "/" + data.short_code;
+    const data = await response.json();
+    document.querySelector(".short-code").textContent = data.short_url;
 
-        shortLinkText.textContent = currentShortUrl;
-        shortenResult.classList.remove("hidden");
+    await loadUrls();
 
-        urlInput.value = "";
-        loadAllLinks();
-
-    } catch (error) {
-        shortenError.textContent = error.message;
-        shortenError.classList.remove("hidden");
-    }
+    urlInput.value = "";
 });
 
-copyBtn.addEventListener("click", async function () {
+Findbtn.addEventListener("click", async () => {
+
+    const code = codeInput.value.trim();
+
+    if (!code)
+        return;
+
+    const response = await fetch(
+        `${API}/expand?short_url=${encodeURIComponent(code)}`
+    );
+
+    const data = await response.json();
+
+    if (data.error) {
+        result.textContent = data.error;
+    } else {
+        result.textContent = "Long URL : " + data.long_url;
+    }
+    codeInput.value = "";
+});
+
+CopyBtn.addEventListener("click", async () => {
+    const code = shortCodeOutput.textContent.trim();
+    if (!code) {
+        alert("No short code to copy!");
+        return;
+    }
     try {
-        await navigator.clipboard.writeText(currentShortUrl);
-        copyBtn.textContent = "Copied!";
-        setTimeout(function () {
-            copyBtn.textContent = "Copy";
-        }, 1500);
-    } catch (error) {
-        copyBtn.textContent = "Failed";
+        await navigator.clipboard.writeText(code);
+        alert("Short code copied!");
+    } catch (err) {
+        console.error(err);
+        alert("Failed to copy.");
     }
 });
 
+qrcodebtn.addEventListener("click", async () => {
 
-const lookupForm = document.getElementById("lookup-form");
-const lookupCodeInput = document.getElementById("lookup-code");
-const lookupResult = document.getElementById("lookup-result");
-const lookupError = document.getElementById("lookup-error");
+    const qr = qrinput.value.trim();
+    if (!qr) return;
 
-lookupForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    lookupResult.classList.add("hidden");
-    lookupError.classList.add("hidden");
+    const qrUrl = `${API}/Qr?short_url=${encodeURIComponent(qr)}`;
 
-    const code = lookupCodeInput.value;
+    qrdisplay.innerHTML = ""; // clear previous QR if any
 
-    try {
-        const response = await fetch("/api/stats/" + code);
-        if (!response.ok) {
-            throw new Error("Short URL not found.");
-        }
-        const data = await response.json();
+    const img = document.createElement("img");
+    img.src = qrUrl;
+    img.alt = "QR Code";
 
-        lookupResult.textContent = data.long_url + " — " + data.clicks + " clicks";
-        lookupResult.classList.remove("hidden");
-
-    } catch (error) {
-        lookupError.textContent = error.message;
-        lookupError.classList.remove("hidden");
-    }
+    qrdisplay.appendChild(img);
 });
 
+async function loadUrls() {
+    const response = await fetch(`${API}/urls`);
+    const data = await response.json();
 
-const linksList = document.getElementById("links-list");
-const linkCount = document.getElementById("link-count");
+    urlcount.textContent = data.length;
 
-async function loadAllLinks() {
-    const response = await fetch("/api/urls");
-    const urls = await response.json();
+    urlList.innerHTML = "";
+    data.forEach(item => {
 
-    linkCount.textContent = urls.length;
-    linksList.innerHTML = "";
+        const li = document.createElement("li");
 
-    urls.forEach(function (item) {
-        const row = document.createElement("div");
-        row.className = "link-row";
+        // Left cell: the short code
+        const codeBlock = document.createElement("div");
+        codeBlock.className = "link-code-block";
+        codeBlock.innerHTML = `<span class="link-code">/${item.short_url}</span>`;
 
-        row.innerHTML = `
-            <span class="code-col">/${item.short_code}</span>
-            <span class="long-col">${item.long_url}</span>
-            <span class="actions">
-                <button class="copy-row-btn" data-code="${item.short_code}">⧉</button>
-                <button class="delete-row-btn" data-code="${item.short_code}">🗑</button>
-            </span>
-        `;
+        // Right cell: the original long URL
+        const urlText = document.createElement("div");
+        urlText.className = "link-url";
+        urlText.textContent = item.long_url;
+        urlText.title = item.long_url; // full URL on hover, since long ones are truncated
 
-        linksList.appendChild(row);
-    });
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copycode";
+        copyBtn.innerHTML = `<ion-icon name="copy-outline"></ion-icon>`;
 
-    document.querySelectorAll(".copy-row-btn").forEach(function (btn) {
-        btn.addEventListener("click", async function () {
-            const code = btn.getAttribute("data-code");
-            const fullUrl = window.location.origin + "/" + code;
-            await navigator.clipboard.writeText(fullUrl);
-            btn.textContent = "✓";
-            setTimeout(function () { btn.textContent = "⧉"; }, 1000);
+        copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(item.short_url);
+            alert("Short URL copied!");
         });
-    });
 
-    document.querySelectorAll(".delete-row-btn").forEach(function (btn) {
-        btn.addEventListener("click", async function () {
-            const code = btn.getAttribute("data-code");
-            await fetch("/api/urls/" + code, { method: "DELETE" });
-            loadAllLinks();
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete";
+        deleteBtn.innerHTML = `<ion-icon name="trash-outline"></ion-icon>`;
+
+        deleteBtn.addEventListener("click", async () => {
+            await fetch(
+                `${API}/Delete?long_url=${encodeURIComponent(item.long_url)}`,
+                {
+                    method: "DELETE"
+                }
+            );
+            loadUrls();
         });
+
+        const buttonContainer = document.createElement("div");
+        buttonContainer.className = "button-container";
+        buttonContainer.appendChild(copyBtn);
+        buttonContainer.appendChild(deleteBtn);
+
+        li.appendChild(codeBlock);
+        li.appendChild(urlText);
+        li.appendChild(buttonContainer);
+
+        urlList.appendChild(li);
+
     });
 }
-
-loadAllLinks();
+loadUrls();
