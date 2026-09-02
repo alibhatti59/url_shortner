@@ -1,53 +1,56 @@
-<!-- frontend/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortner</title>
-    <link rel="stylesheet" href="/frontend/style.css">
+    <title>Url Shortener</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+
 </head>
 
 <body>
-    <main>
-        <h1>URL Shortner</h1>
-        <p class="tagline">Long links in, short stubs out.</p>
-
-        <section class="block">
-            <label>Paste a long URL</label>
-            <form id="shorten-form">
-                <input type="url" id="url" placeholder="https://example.com/a/very/long/path" required>
-                <button type="submit">Shorten</button>
-            </form>
-        </section>
-
-        <div id="shorten-result" class="result hidden">
-            <span id="short-link-text"></span>
-            <button id="copy-btn">Copy</button>
+    <div class="container">
+        <h3>Url Shortener</h3>
+        <div class="long-url-container">
+            <input type="text" id="long-url-input" placeholder="Paste a long url">
+            <button id="long-url-btn">Shorten</button>
         </div>
-        <p id="shorten-error" class="error hidden"></p>
 
-        <section class="block">
-            <label>Look up a code</label>
-            <form id="lookup-form">
-                <input type="text" id="lookup-code" placeholder="k3m9qz">
-                <button type="submit">Find</button>
-            </form>
-        </section>
-        <div id="lookup-result" class="result hidden"></div>
-        <p id="lookup-error" class="error hidden"></p>
+        <div class="codes">
+            <output id="short-code" class="short-code" placeholder="Code"></output>
+            <button class="copy">
+                <span class="copy-label">Copy</span>
+            </button>
+        </div>
 
-        <section class="block">
-            <div class="links-header">
-                <label>Your links</label>
-                <span id="link-count">0</span>
+        <div class="short-url-container">
+            <input type="text" id="short-url-input" placeholder="Paste a code">
+            <button id="short-url-btn">Find</button>
+        </div>
+        <div class="qr-section">
+            <div class="qr_code" id="qr_code">
+                <input type="text" id="qr_input" placeholder="Paste a code">
+                <button id="qr_code_btn">Generate QR</button>
             </div>
-            <div id="links-list"></div>
-        </section>
-    </main>
+            <div id="qr_display"></div>
+        </div>
+        <h5>Your Links <span id="url-count">0</span></h5>
+        <hr>
+        <div class="list-container">
+            <ul id="url-list"></ul>
+        </div>
+        <p id="result"></p>
+    </div>
 
-    <script src="/frontend/script.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>
