@@ -1,66 +1,96 @@
-from pathlib import Path
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse
-from bson import ObjectId
+from fastapi import FastAPI
+from database import Collection
+import hashlib
+import qrcode
+import io
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse,RedirectResponse
 
-from api.models import URLCreateRequest
-from api import services
+app = FastAPI()
 
-app = FastAPI(title="snip.sh clone")
+origins = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5501"
+]
 
-BASE_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = BASE_DIR.parent / "frontend"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+def generateShortCode(longUrl):
+    hash_value = hashlib.md5(longUrl.encode()).hexdigest()
+    return hash_value[:4]
 
+@app.get("/health")
+def health_check():
+    return { "status": "Healthy" }
 
-def serialize(document: dict) -> dict:
-    """Mongo documents contain an ObjectId in _id, which isn't JSON-serializable.
-    Convert it to a plain string, or drop it, before returning to the client."""
-    document = dict(document)
-    document["_id"] = str(document["_id"])
-    if "created_at" in document:
-        document["created_at"] = document["created_at"].isoformat()
-    return document
+@app.post("/shortner")
+def shorten(longUrl :str):
+    Short_Url= generateShortCode(longUrl)
+    short_url_display= f"http://127.0.0.1:8000/{Short_Url}"
 
+    existing_record = Collection.find_one({"long_url": longUrl})
 
-@app.get("/", include_in_schema=False)
-def serve_homepage():
-    return FileResponse(FRONTEND_DIR / "index.html")
+    if not existing_record:
+        Collection.insert_one({
+            "long_url" : longUrl,
+            "short_url" : Short_Url
+        })
 
+    return{
+        "long_url" : longUrl,
+        "short_url" : short_url_display
+    }
+@app.get("/Qr")
+def QR_code(short_url:str):
+    img = qrcode.make(short_url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
 
-@app.post("/api/shorten")
-async def shorten_url(payload: URLCreateRequest):
-    document = await services.create_short_url(str(payload.long_url))
-    return serialize(document)
+@app.get("/expand")
+def expand(short_url: str):
+    document = Collection.find_one({"short_url": short_url})
+    if document:
+        return {
+            "short_url": document["short_url"],
+            "long_url": document["long_url"]
+        }
 
+    return {"error": "Short URL not found"}
 
-@app.get("/api/stats/{short_code}")
-async def get_stats(short_code: str):
-    document = await services.get_url_stats(short_code)
-    if not document:
-        raise HTTPException(status_code=404, detail="Short URL not found")
-    return serialize(document)
+@app.delete("/Delete")
+def Delete(long_url:str):
+    Delete_Result = Collection.delete_one({"long_url": long_url})
+    if Delete_Result.deleted_count==1:
+     return{
+         "Message": "Url deleted sucessfully"
+    }
+    return{
+        "Message":"Url not found"
+    }
+    
+@app.get("/urls")
+def list_urls():
+    results = []
+    for doc in Collection.find({}):
+        data = {
+            "long_url": doc["long_url"],
+            "short_url": doc["short_url"]
+        }
+        results.append(data)    
 
+    return results
 
-@app.get("/api/urls")
-async def list_urls():
-    documents = await services.get_all_urls()
-    return [serialize(doc) for doc in documents]
-
-
-@app.delete("/api/urls/{short_code}")
-async def remove_url(short_code: str):
-    deleted = await services.delete_url(short_code)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Short URL not found")
-    return {"message": "Deleted successfully"}
-
-
-@app.get("/{short_code}")
-async def redirect_to_long_url(short_code: str):
-    long_url = await services.get_long_url_and_increment_clicks(short_code)
-    if not long_url:
-        raise HTTPException(status_code=404, detail="Short URL not found")
-    return RedirectResponse(url=long_url, status_code=302)
+@app.get("/{short_url}")
+def redirect_short_url(short_url: str):
+    document = Collection.find_one({"short_url": short_url})
+    if document:
+        return RedirectResponse(document["long_url"])
+    return {"error": "Short URL not found"}

@@ -1,9 +1,17 @@
 import os
-from pymongo import AsyncMongoClient
 from dotenv import load_dotenv
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 load_dotenv()
 
-client = AsyncMongoClient(os.getenv("MONGODB_URI"))
-db = client["url_shortener"]
-urls_collection = db["urls"]
+MONGO_URI = os.getenv("MONGO_URI")
+
+if not MONGO_URI:
+    raise ValueError("MONGO_URI is not set. Did you create api/.env from .env.example?")
+
+client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+
+db = client['URL_shortener']
+
+Collection = db['data']

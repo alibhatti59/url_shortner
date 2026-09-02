@@ -1,79 +1,91 @@
 # URL Shortener
 
-A full-stack URL shortener — paste a long URL, get a short one back, and track clicks on it.
-
-**Stack:** FastAPI (Python) · MongoDB Atlas · HTML/CSS/JS
-
----
+A full-stack URL shortener built with FastAPI, PyMongo, and vanilla JavaScript. Shorten long URLs into random 6-character codes, expand them back, generate QR codes, and manage saved links.
 
 ## Features
 
-- Shorten a URL into a random 6-character code
-- Redirect short → long via HTTP 302
-- Click tracking per link
-- Duplicate detection (same URL reuses its existing code)
-- List and delete saved links
+- Shorten a long URL into a short, random, unique code
+- Redirect a short code to its original URL
+- Expand a short code back to its long URL without redirecting
+- List all saved links
+- Delete a saved link
+- Generate a QR code for any short URL
 
----
+## Tech stack
 
-## Run Locally
+- **Backend:** Python, FastAPI, PyMongo
+- **Database:** MongoDB Atlas
+- **Frontend:** HTML, CSS, vanilla JavaScript
 
-```bash
-git clone https://github.com/YOUR_USERNAME/url-shortener.git
-cd url-shortener/api
-
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-cp .env.example .env            # then add your MongoDB URI
-uvicorn main:app --reload
-```
-
-Open `http://localhost:8000`.
-
-### Environment Variables
+## Project structure
 
 ```
-MONGODB_URI=mongodb://<user>:<password>@<host1>,<host2>,<host3>/?ssl=true&replicaSet=<name>&authSource=admin
+url-shortener/
+├── api/
+│   ├── main.py            # FastAPI app and route definitions
+│   ├── config.py          # MongoDB connection (reads MONGO_URI from .env)
+│   ├── schema.py          # Pydantic data models
+│   ├── requirements.txt
+│   └── .env.example
+└── web/
+    ├── index.html
+    ├── style.css
+    └── script.js
 ```
 
----
+## Setup
 
-## API
+1. Clone the repo and enter the backend folder:
+   ```bash
+   git clone <your-repo-url>
+   cd url-shortener/api
+   ```
 
-| Method   | Endpoint             | Description                        |
-|----------|-----------------------|-------------------------------------|
-| `POST`   | `/api/shorten`         | Create a short URL                  |
-| `GET`    | `/api/stats/{code}`    | Get a link's details + click count  |
-| `GET`    | `/api/urls`             | List all links                      |
-| `DELETE` | `/api/urls/{code}`      | Delete a link                       |
-| `GET`    | `/{code}`                | Redirect to the original URL        |
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
 
-```bash
-curl -X POST http://localhost:8000/api/shorten \
-  -H "Content-Type: application/json" \
-  -d '{"long_url": "https://example.com/a/very/long/path"}'
-```
+   # Windows
+   .venv\Scripts\activate
 
----
+   # Mac/Linux
+   source .venv/bin/activate
+   ```
 
-## Project Structure
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```
-api/            FastAPI backend (routes, DB logic, services)
-frontend/       Static HTML/CSS/JS
-```
+4. Copy `.env.example` to `.env` and add your own MongoDB Atlas connection string:
+   ```bash
+   cp .env.example .env
+   ```
+   If your network blocks DNS SRV lookups, use the non-SRV connection string from Atlas (Connect → Drivers → older driver version) instead of the `mongodb+srv://` one.
 
----
+5. Run the API:
+   ```bash
+   uvicorn main:app --reload --port 8000
+   ```
 
-## What I Learned
+6. Open `web/index.html` with a local server (e.g. VS Code's Live Server extension) — it expects the API at `http://127.0.0.1:8000`.
 
-- Building a layered backend (routes → services → database) instead of putting everything in one file
-- Atomic database operations (`find_one_and_update`) to avoid race conditions on click counting
-- Debugging DNS/SRV connection failures between MongoDB Atlas and a local network
-- Why relative file paths break depending on where a script is run from, and using `Path(__file__)` to fix it
-- Deploying a Python backend + static frontend on Render
+## API endpoints
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/health` | Health check |
+| POST | `/shortner?longUrl=` | Create (or reuse) a short code for a URL |
+| GET | `/expand?short_url=` | Look up the long URL for a short code |
+| GET | `/urls` | List all saved links |
+| DELETE | `/Delete?long_url=` | Delete a saved link |
+| GET | `/Qr?short_url=` | Generate a QR code PNG for a short URL |
+| GET | `/{short_url}` | Redirect a short code to its long URL |
+
+## Notes
+
+- Short codes are generated with Python's `secrets` module (cryptographically secure randomness), not derived from the URL — shortening the same URL twice returns the same saved code, but the code itself isn't predictable from the URL.
+- `.env` is git-ignored; never commit real database credentials. `.env.example` documents the required variable without real values.
 
 ## Author
 
@@ -81,4 +93,4 @@ frontend/       Static HTML/CSS/JS
 
 ## License
 
-Built for learning purposes.
+MIT
